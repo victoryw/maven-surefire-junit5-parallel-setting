@@ -7,7 +7,7 @@
 * 及`junit5`通过 `junit.jupiter.execution.parallel`使用线程的方式并行执行java测试
 * 以及`maven fork test execution` 和 `junit.jupiter.execution.parallel`同时使用会对测试方法级别的并发产生不同的影响
 
-<img src="imgs/java-parallel-setting.png">
+![image](imgs/java-parallel-setting.png)
 
 ## maven surefire 的 fork test execution
 
