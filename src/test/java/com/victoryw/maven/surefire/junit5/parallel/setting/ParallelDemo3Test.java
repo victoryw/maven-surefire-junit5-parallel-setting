@@ -22,6 +22,6 @@ class ParallelDemo3Test {
     @Test
     void should_return_method3_value() throws InterruptedException {
         val parallelDemo3 =new ParallelDemo3();
-        assertEquals(4, parallelDemo3.method2());
+        assertEquals(4, parallelDemo3.method3());
     }
 }
