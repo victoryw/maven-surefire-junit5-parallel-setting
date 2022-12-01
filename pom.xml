@@ -17,6 +17,7 @@
 		<java.version>17</java.version>
 		<forkCount>1</forkCount>
 		<reuseForks>false</reuseForks>
+		<parallel></parallel>
 	</properties>
 	<dependencies>
 
@@ -58,6 +59,7 @@
 				<configuration>
 					<forkCount>${forkCount}</forkCount>
 					<reuseForks>${reuseForks}</reuseForks>
+					<parallel>${parallel}</parallel>
 				</configuration>
 			</plugin>
 			<plugin>
