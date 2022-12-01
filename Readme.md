@@ -29,6 +29,42 @@
 
 ```
 
+### fork test execution的执行过程
+
+`maven surefire` 执行 `fork test execution`：
+1. 根据 `forkCount` 启动 N 个 `JVM` 进程
+2. `maven surefire` 将 一个 `testClass` 放入 一个 进程中运行测试
+
+**示例**： 执行 `make forked-test-execution`, 首先在不同进程(59338,59339)中同时开始执行了两个测试类（`ParallelDemo1Test`, `ParallelDemo3Test`）的用例；在之前的测试类执行完毕后，在进程（59436）中执行 `ParallelDemo2Test`测试类的用例
+
+``` Bash
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo3Test
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo1Test
+[59338]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method2 is run
+[59339]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method8 is run
+[59338]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method2 is run over
+[59339]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method8 is run over
+[59338]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method3 is run
+[59339]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method9 is run
+[59338]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method3 is run over
+[59338]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method is run
+[59339]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method9 is run over
+[59339]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method7 is run
+[59338]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method is run over
+[59339]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method7 is run over
+[ThreadedStreamConsumer] [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.127 s - in com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo3Test
+[ThreadedStreamConsumer] [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.126 s - in com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo1Test
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo2Test
+[59436]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method5 is run
+[59436]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method5 is run over
+[59436]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method6 is run
+[59436]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method6 is run over
+[59436]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method4 is run
+[59436]-[main] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method4 is run over
+[ThreadedStreamConsumer] [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.125 s - in com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo2Test
+
+```
+
 ### forkCount 的配置
 ### reuseForks 的配置
 ### MAVEN -T 的影响
