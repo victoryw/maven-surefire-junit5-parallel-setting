@@ -3,9 +3,15 @@
 
 本文说明了
 
-* 通过`maven surefire`可以通过`fork test execution`使用多进程的方式并行执行java测试
-* 及`junit5`通过 `junit.jupiter.execution.parallel`使用线程的方式并行执行java测试
-* 以及`maven fork test execution` 和 `junit.jupiter.execution.parallel`同时使用会对测试方法级别的并发产生不同的影响
+* `maven surefire`可以通过`fork test execution`使用多进程的方式并行执行java测试
+* `junit5`通过 `junit.jupiter.execution.parallel`使用线程的方式并行执行java测试
+* 以及`maven fork test execution` 和 `junit.jupiter.execution.parallel`同时使用会对并发执行产生交叉影响，尤其是当`fork count`＜ test class的数量时
+  * `maven surefire` 会把 test class 分配到不同进程中执行  
+    `renuesFork` 为 false时，因为`maven surefire`试图把测试类分配到不同的进程中，  
+     导致同时最多只有`fork count `个测试类在执行。
+  * `junit.jupiter.execution.parallel.mode.classes.default` 会控制在同一个进程中 test class 是否并行执行  
+    `mode.classes.default`为same_thread的时候，因为每个进程内只能同时执行一个 test class  
+    导致同时最多只有`fork count `个测试类在执行。
 
 ![image](imgs/java-parallel-setting.png)
 
@@ -158,5 +164,75 @@ ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parall
 [68310]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method9 is run over 
 ```
 ## 联合应用 fork test execution 和 junit.jupiter.execution.parallel
+
+### fork count ＜ 测试类时 
+
+实验代码中的测试类数量为3，fork count 为2；
+
+#### mode.default 为 concurrent， mode.classes.default 为 concurrent 时
+虽然我们希望所有的测试用例并行执行，但是`maven fork` 会控制测试类分配到不同的进程中，导致了 `renuesFork` 为 false时，只有`fork count `个测试类在并行执行。  
+
+**示例：** `make maven-surefire-fork-count-2-reuseForks-junit-enable-concurrent-class-concurrent-method`, 此时 `renuesFork` 设置为 true，所有测试并行执行，但是只启动了两个jvm 进程
+
+``` shell
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo1Test
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo3Test
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo2Test
+[68961]-[ForkJoinPool-1-worker-4] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method is run 
+[68961]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method3 is run 
+[68961]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method2 is run 
+[68962]-[ForkJoinPool-1-worker-6] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method5 is run 
+[68962]-[ForkJoinPool-1-worker-6] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method6 is run 
+[68962]-[ForkJoinPool-1-worker-6] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method4 is run 
+[68962]-[ForkJoinPool-1-worker-6] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method7 is run 
+[68962]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method8 is run 
+[68962]-[ForkJoinPool-1-worker-5] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method9 is run 
+```
+
+**示例：** `make maven-surefire-fork-count-2-not-reuseForks-junit-enable-concurrent-class-concurrent-method`, 此时 `renuesFork` 设置为 false，因为 `maven surefire` 试图把第三个测试类分配在新的进程中执行，导致实际只有两个测试类在并行执行
+
+``` shell
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo1Test
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo3Test
+[69055]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method is run 
+[69055]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method2 is run 
+[69055]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method3 is run 
+[69054]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method7 is run 
+[69054]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method9 is run 
+[69054]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method8 is run 
+[69055]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method is run over 
+[69054]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method7 is run over 
+[69055]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method2 is run over 
+[69054]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method9 is run over 
+[69055]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method3 is run over 
+[69054]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method8 is run over 
+[ThreadedStreamConsumer] [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.118 s - in com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo1Test
+[ThreadedStreamConsumer] [INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.118 s - in com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo3Test
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo2Test
+[69075]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method4 is run 
+[69075]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method6 is run 
+[69075]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method5 is run 
+[69075]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method4 is run over 
+[69075]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method6 is run over 
+[69075]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo2 - The method5 is run over 
+```
+
+#### mode.classes.default 为 same_thread 时
+
+因为`junit.jupiter.execution.parallel.mode.classes.default` 会控制在同一个进程中 test class 是否并行执行  
+`mode.classes.default`为same_thread的时候，因为每个进程内只能同时执行一个 test class
+
+**示例：** `make maven-surefire-fork-count-2-reuseForks-junit-enable-concurrent-class-same_thread-method`, 此时 实际只有两个测试类在并行执行， 如下图：
+
+``` shell
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo1Test
+[ThreadedStreamConsumer] [INFO] Running com.victoryw.maven.surefire.junit5.parallel.setting.ParallelDemo3Test
+[70280]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method is run 
+[70280]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method2 is run 
+[70280]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo1 - The method3 is run 
+[70279]-[ForkJoinPool-1-worker-1] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method7 is run 
+[70279]-[ForkJoinPool-1-worker-3] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method9 is run 
+[70279]-[ForkJoinPool-1-worker-2] DEBUG c.v.m.s.j.p.setting.ParallelDemo3 - The method8 is run
+```
 
 ## 代码库的简单说明
